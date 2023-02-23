@@ -1,0 +1,18 @@
+<component name="ArtifactManager">
+  <artifact name="ConsumerTwinder2:jar">
+    <output-path>$PROJECT_DIR$/out/artifacts/ConsumerTwinder2_jar</output-path>
+    <root id="root">
+      <element id="archive" name="ConsumerTwinder2.jar">
+        <element id="directory" name="META-INF">
+          <element id="file-copy" path="$PROJECT_DIR$/src/main/resources/META-INF/MANIFEST.MF" />
+        </element>
+        <element id="module-output" name="ConsumerTwinder2" />
+      </element>
+      <element id="library" level="project" name="Maven: org.slf4j:slf4j-api:2.0.3" />
+      <element id="library" level="project" name="Maven: com.rabbitmq:amqp-client:5.16.0" />
+      <element id="library" level="project" name="Maven: org.projectlombok:lombok:1.18.22" />
+      <element id="library" level="project" name="Maven: org.json:json:20160810" />
+      <element id="javaee-facet-resources" facet="ConsumerTwinder2/web/Web" />
+    </root>
+  </artifact>
+</component>
