@@ -9,15 +9,19 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class SwipeDao {
     private static BasicDataSource dataSource;
     // Single pattern: instantiation is limited to one object.
     private static SwipeDao instance = null;
 
+
     public SwipeDao() {
         dataSource = DBCPDataSource.getDataSource();
     }
+
 
     public static SwipeDao getInstance() {
         if (instance == null) {
@@ -41,6 +45,42 @@ public class SwipeDao {
             
             // execute insert SQL statement
             preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException(e);
+        } finally {
+            try {
+                if (conn != null) {
+                    conn.close();
+                }
+                if (preparedStatement != null) {
+                    preparedStatement.close();
+                }
+            } catch (SQLException se) {
+                se.printStackTrace();
+            }
+        }
+    }
+
+    //create SwipePOJO records
+    public void createSwipes(Set<SwipePOJO> matchSet) {
+        Connection conn = null;
+        PreparedStatement preparedStatement = null;
+        String insertQueryStatement = "INSERT ignore INTO Likes (Swipee, Swiper) " +
+                "VALUES (?,?)";
+        try {
+            conn = dataSource.getConnection();
+            preparedStatement = conn.prepareStatement(insertQueryStatement);
+            for(SwipePOJO swipePOJO : matchSet){
+                preparedStatement.setInt(1, swipePOJO.getSwipee());
+                preparedStatement.setInt(2, swipePOJO.getSwiper());
+                preparedStatement.addBatch();
+
+            }
+
+
+
+            // execute insert SQL statement
+            preparedStatement.executeBatch();
         } catch (SQLException e) {
             throw new RuntimeException(e);
         } finally {

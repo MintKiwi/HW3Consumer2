@@ -5,8 +5,7 @@ import model.SwipePOJO;
 
 import javax.sql.DataSource;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.concurrent.ConcurrentHashMap;
+
 
 
 public class MessageDispatcher implements Runnable {
@@ -14,13 +13,15 @@ public class MessageDispatcher implements Runnable {
     private Connection connection;
     private DataSource dataSource;
     private SwipeDao swipeDao;
+    private Consumer consumer;
 
 
-    public MessageDispatcher(Connection connection) {
-        try{
+    public MessageDispatcher(Connection connection, Consumer consumer) {
+        try {
             this.connection = connection;
             this.dataSource = DBCPDataSource.getDataSource();
             this.swipeDao = SwipeDao.getInstance();
+            this.consumer = consumer;
 
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -36,7 +37,6 @@ public class MessageDispatcher implements Runnable {
                 @Override
                 public void handleDelivery(String consumerTag, Envelope envelope, AMQP.BasicProperties properties, byte[] body) throws IOException {
                     String message = new String(body, "UTF-8");
-                    ConcurrentHashMap<String, HashSet<String>> map = Consumer.map;
                     int index = message.indexOf("swiper");
                     int index2 = message.indexOf("swipee");
                     int index3 = message.indexOf("comment");
@@ -44,22 +44,42 @@ public class MessageDispatcher implements Runnable {
                     String swipee = message.substring(index2 + 9, index3 - 3);
                     int index4 = message.indexOf("leftOrRight");
                     String direction = message.charAt(index4 + 14) == 'r' ? "right" : "left";
+
+                    //currentCount is the old value
+                    int currentCount = consumer.getCount().getAndIncrement();
+
+                    //add data into the sets
                     if (direction.equals("right")) {
-                        if (!map.containsKey(swiper)) {
-                            map.put(swiper, new HashSet<>(100));
+                        switch((currentCount / 100000) % 2){
+                            case 0:
+                                Consumer.matchSet1.add(new SwipePOJO(Integer.parseInt(swipee), Integer.parseInt(swiper)));
+
+                                break;
+                            case 1:
+                                Consumer.matchSet2.add(new SwipePOJO(Integer.parseInt(swipee), Integer.parseInt(swiper)));
+                                break;
+
                         }
-                        if (map.get(swiper).size() < 100) {
-                            if(!map.get(swiper).contains(swipee)){
-                                //add the swipe record if the swiper swiped right, the record is not duplicated and the
-                                // number of swipees is not greater than 100
-                                SwipePOJO swipePOJO = new SwipePOJO(Integer.parseInt(swipee), Integer.parseInt(swiper));
-                                swipeDao.createSwipe(swipePOJO);
-                                map.get(swiper).add(swipee);
-                            }
+
+
+                    }
+                    //currentCount + 1 is the actual size，insert every 100000 rows in batch
+                    if((currentCount + 1) % 100000 == 0){
+                        switch ((currentCount / 100000) % 2){
+                            case 0:
+                                swipeDao.createSwipes(Consumer.matchSet1);
+                                Consumer.matchSet1.clear();
+                                break;
+                            case 1:
+                                swipeDao.createSwipes(Consumer.matchSet2);
+                                Consumer.matchSet2.clear();
+                                break;
+
 
                         }
 
                     }
+
 
 
 
